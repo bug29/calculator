@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" data-whatinput="keyboard" data-whatintent="mouse" class="whatinput-types-initial fa-events-icons-ready whatinput-types-keyboard">
+
+<head>
+  <title>계산기</title>
+  <meta charset="UTF-8">
+  <meta name="description" content="QR" />
+  <meta name="keywords" content="QR" />
+  <meta name="autocomplete" content="off" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  <link rel="stylesheet" type="text/css" href="css/calculator.css" />
+
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.7.0.slim.min.js"></script>
+  <script type="text/javascript" src="js/calculator.js"></script>
+  <script>
+    $(document).ready(function() {
+      Calc.init();
+      $(".view-wrap").on("alert", function(e, _o) {
+        console.log(_o);
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <div id="calculator">
+    <header></header>
+    <section>
+      <div class="view-wrap"></div>
+      <div class="button-wrap">
+        <ul>
+          <li>
+            <button value="7" title="7">7</button>
+            <button value="8" title="8">8</button>
+            <button value="9" title="9">9</button>
+            <button value="+" title="&#43;">&#43;</button>
+          </li>
+          <li>
+            <button value="4" title="4">4</button>
+            <button value="5" title="5">5</button>
+            <button value="6" title="6">6</button>
+            <button value="-" title="&#45;">&#45;</button>
+          </li>
+          <li>
+            <button value="1" title="1">1</button>
+            <button value="2" title="2">2</button>
+            <button value="3" title="3">3</button>
+            <button value="*" title="&#215;">&#215;</button>
+          </li>
+          <li>
+            <button value="delete" title="&#8592;">&#8592;</button>
+            <button value="0" title="0">0</button>
+            <button value="." title=".">.</button>
+            <button value="/" title="&#247;">&#247;</button>
+          </li>
+          <li>
+            <button value="(" title="(">(</button>
+            <button value=")" title=")">)</button>
+            <button value="clear" title="다시 하기">C</button>
+            <button value="=" title="&#61;">&#61;</button>
+          </li>
+        </ul>
+      </div>
+      <div class="input-wrap">
+        <input class="input-field" />
+        <button class="btn-input" title="수식 입력">수식입력</button>
+      </div>
+      <div class="history-wrap"></div>
+    </section>
+  </div>
+</body>
+</html>
