@@ -2,3 +2,9 @@
 
 html, body, div, button, ul, li { margin: 0; padding: 0; border: 0; outline: none; }
 html, body { width: 100%; height: 100%; vertical-align: baseline; }
+
+#calculator { --w: 240px; }
+#calculator .view-wrap { position: relative; width: var(--w); height: 80px; }
+#calculator .button-wrap { position: relative; width: var(--w); }
+#calculator .button-wrap li { position: relative; width: 100%; text-align: center; }
+#calculator .button-wrap button { position: relative; display: inline-block; width: 50px; padding: 4px; cursor: pointer; }

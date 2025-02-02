@@ -50,15 +50,15 @@ var Calc = Calc || (
       incompleteBracket: "괄호가 짝이 맞지 않음",
       checkBracketOrder: "괄호 순서 오류",
       copyToClipboard: "수식을 클립보드에 복사하였습니다.",
-      noInput: "입력 안됨",
+      inputDisabled: "입력 안됨",
       errorPoint: "소숫점 갯수 오류",
       errorCalculator: "연산 중 오류 발생",
       errorClipboard: "수식 복사 중 에러 발생"
     }
 
     const _Util = {
-      isDeleteButton: function (_$m) { return (typeof _$m == "string" ? _$m : _$m.val()).toLowerCase().startsWith("del"); },
-      isResetButton: function (_$m) { return (typeof _$m == "string" ? _$m : _$m.val()).toLowerCase().startsWith("cl"); }
+      isBackButton: function(_$m) { return (typeof _$m == "string" ? _$m : _$m.val()).charAt(0).toLowerCase() == "b"; },
+			isClearButton: function(_$m) { return (typeof _$m == "string" ? _$m : _$m.val()).charAt(0).toLowerCase() == "c"; }
     };
 
     function init(_option) {
@@ -79,8 +79,8 @@ var Calc = Calc || (
       updateHistory.call(owner);
 
       $(`${_C.button_wrap} button`, _C._root).off(_E.click).on(_E.click, function (e) {
-        if (_Util.isResetButton($(this))) reset.call(owner);
-        else if (_Util.isDeleteButton($(this))) {
+        if (_Util.isClearButton($(this))) reset.call(owner);
+        else if (_Util.isBackButton($(this))) {
           owner.isCalculated = false;
           back.call(owner);
         }
@@ -165,7 +165,7 @@ var Calc = Calc || (
 
       // input
       if (enableInput) {
-        let $input = $(owner.input_wrap, _C._root);
+        let $input = $(_C.input_wrap, _C._root);
         $(_C.btn_input, $input).off(_E.click).on(_E.click, function (e) {
           input.call(owner, $("input", $input).val());
         });
@@ -187,8 +187,8 @@ var Calc = Calc || (
 
       // inner method
       function _do(_v) {
-        if (!owner.enable && !_Util.isDeleteButton(_v) && !_Util.isResetButton(_v)) {
-          owner.alert(_Alert.noInput);
+        if (!owner.enable && !_Util.isBackButton(_v) && !_Util.isClearButton(_v)) {
+          owner.alert(_Alert.inputDisabled);
           return false;
         }
 
@@ -233,43 +233,27 @@ var Calc = Calc || (
       function _number(_n) {
         let id = Math.max(owner.dataList.length - 1, 0);
 
-        if (checkConst.call(owner, owner.dataList[id], true) != null) {
-          owner.dataList.push("");
-          id = owner.dataList.length - 1;
-        }
-        else if (owner.dataList[id] == "(") {
-          owner.dataList.push("");
-          id = owner.dataList.length - 1;
-        }
+        if (checkConst.call(owner, owner.dataList[id], true) != null) id = __pushNew();
+        else if (owner.dataList[id] == "(") id = __pushNew();
         else if (owner.dataList[id] == ")") {
           owner.dataList.push("*");
-          owner.dataList.push("");
-          id = owner.dataList.length - 1;
+          id = __pushNew();
         }
         else if (isOperator.call(owner, owner.dataList[id])) {
           if (owner._Config.enableNegative) {
             if (owner.dataList[id] == "-") {
-              if (id <= 0 || !isOperator.call(owner, owner.dataList[id - 1])) {
-                owner.dataList.push("");
-                id = owner.dataList.length - 1;
-              }
+              if (id <= 0 || !isOperator.call(owner, owner.dataList[id - 1])) id = __pushNew();
             }
-            else {
-              owner.dataList.push("");
-              id = owner.dataList.length - 1;
-            }
+            else id = __pushNew();
           }
-          else {
-            owner.dataList.push("");
-            id = owner.dataList.length - 1;
-          }
+          else id = __pushNew();
         }
 
         let t = owner.dataList[id];
         if (t == null) t = "";
         if (_n == ".") {
           if (t.indexOf(".") >= 0) {
-            owner.alert(_Alert.errorPoint)
+            owner.alert(_Alert.errorPoint);
             return;
           }
 
@@ -286,6 +270,12 @@ var Calc = Calc || (
         }
         owner.dataList[id] = String(t) + String(_n);
         update.call(owner);
+
+        // inner method
+        function __pushNew() {
+          owner.dataList.push("");
+          return owner.dataList.length-1;
+        }
       }
 
       function _negative() {
@@ -346,7 +336,9 @@ var Calc = Calc || (
 
     function update(_add) {
       const owner = this;
-      const $wrap = $(_C.view_wrap, _C._root);
+      
+      $(_C.view_wrap, _C._root).empty().append(`<div class="${_C.x(_C.container)}"></div>`);
+      const $wrap = $(`${_C.view_wrap} ${_C.container}`, _C._root);
       $wrap.empty();
 
       let t = [];
@@ -369,7 +361,7 @@ var Calc = Calc || (
       if (_add != null) $wrap.append(_add);
 
       $wrap.css("top", ($wrap.height() >= $wrap.parent().height() ? Math.floor($wrap.parent().height() - $wrap.height()) : 0));
-      $wrap.trigger(_E.update);
+      $(_C._root).trigger(_E.update);
 
       // inner method
       function _code(_v, _i) {
@@ -420,7 +412,7 @@ var Calc = Calc || (
 
       // 코드 구성
       try {
-        let output = eval(_isDeep(o) ? _deep(o) : _simple(o));
+        let output = _isDeep(o) ? _deep(o) : _simple(o);
         if (output == null) update.call(owner);
         else {
           update.call(owner, `<span class="${[_C.x(_C.item), _C.x(_C.answer)].join(" ")}">= ${output}</span>`);
@@ -455,11 +447,13 @@ var Calc = Calc || (
 
         //console.log("[CAL:9]", _o)
 
-        return _do(_order(eval(`[${_o}]`)));
+        //return _do(_order(eval(`[${_o}]`)));
+        try { return _do(_order(JSON.parse(`[${_o}]`))); }
+        catch(err) { return null; }
       }
 
       function _simple(_o) {
-        return _o.split(",").join("");
+        return eval(_o.split(",").join(""));
       }
 
       function _do(_t) {
@@ -577,18 +571,17 @@ var Calc = Calc || (
       this.enable = true;
       this.dataList = [];
 
-      $(_C.view_wrap, _C._root).empty();
-      $(_C.view_wrap, _C._root).append(`<div class="${_C.x(_C.container)}"></div>`);
+      $(_C.view_wrap, _C._root).empty().append(`<div class="${_C.x(_C.container)}"></div>`);
       update.call(this);
     }
 
     function close() {
-      $(_C.view_wrap, _C._root).trigger(_E.close);
+      $(_C._root).trigger(_E.close);
     }
 
     // alert
     function alert(_v, _o) {
-      $(_C.view_wrap, _C._root).trigger(_E.alert,
+      $(_C._root).trigger(_E.alert,
         _o == null ? _v : $.extend(_o, {text: _v})
       );
     }
