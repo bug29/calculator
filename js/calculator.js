@@ -1,7 +1,13 @@
+/*****************************************/
+/********** [calculator] *****************/
+/********** code by bug29 ****************/
+/********** updated: 2025.06.06 **********/
+/*****************************************/
+
 var Calc = Calc || (
   function () {
     const _Const = {
-      //pi: { key: "π", value: "Math.PI" }
+      //pi: { key: "π", value: 3.14 } //Math.PI
     };
 
     const _C = {
@@ -73,13 +79,16 @@ var Calc = Calc || (
         if (_option.enableKey != null) enableKey = Boolean(_option.enableKey);
         if (_option.enableCopy != null) enableCopy = Boolean(_option.enableCopy);
         if (_option.enableHistory != null) owner._Config.enableHistory = Boolean(_option.enableHistory);
+        if (_option.reuseResult != null) owner._Config.reuseResult = Boolean(_option.reuseResult);
       }
+
+      owner.previousResult = null;
 
       reset.call(owner);
       updateHistory.call(owner);
 
       $(`${_C.button_wrap} button`, _C._root).off(_E.click).on(_E.click, function (e) {
-        if (_Util.isClearButton($(this))) reset.call(owner);
+        if (_Util.isClearButton($(this))) reset.call(owner, true);
         else if (_Util.isBackButton($(this))) {
           owner.isCalculated = false;
           back.call(owner);
@@ -215,7 +224,8 @@ var Calc = Calc || (
               break;
 
             case "-":
-              owner._Config.enableNegative ? _negative() : _operator("-");
+              if(owner._Config.reuseResult && owner.dataList.length <= 0 && owner.previousResult != null) _operator("-");
+              else owner._Config.enableNegative ? _negative() : _operator("-");
               break;
 
             case "(":
@@ -281,7 +291,11 @@ var Calc = Calc || (
       function _negative() {
         let id = Math.max(owner.dataList.length - 1, 0);
         if (isOperator.call(owner, owner.dataList[id])) {
-          if (id > 0 && isOperator.call(owner, owner.dataList[id - 1])) {
+          if (id == 0) {
+            owner.alert(_Alert.duplicateNegative);
+            return;
+          }
+          else if (id > 0 && isOperator.call(owner, owner.dataList[id - 1])) {
             owner.alert(_Alert.duplicateNegative);
             return;
           }
@@ -292,7 +306,14 @@ var Calc = Calc || (
       }
 
       function _operator(_n) {
-        if (owner.dataList.length == 0) owner.dataList[0] = isPlusMinus.call(owner, _n) ? "0" : "1";
+        if (owner.dataList.length == 0) {
+          if(owner._Config.reuseResult && owner.previousResult != null) {
+            const v = String(owner.previousResult);
+            if(v[0] == "-") owner.dataList = ["-", v.slice(1)];
+            else owner.dataList[0] = v;
+          }
+          else owner.dataList[0] = isPlusMinus.call(owner, _n) ? "0" : "1";
+        }
 
         let id = Math.max(owner.dataList.length - 1, 0);
         if (isOperator.call(owner, owner.dataList[id])) {
@@ -358,7 +379,10 @@ var Calc = Calc || (
         });
       }
 
-      if (_add != null) $wrap.append(_add);
+      if (_add != null) {
+        $wrap.append(_add);
+        _resize($(_C.answer, $wrap), $wrap.width());
+      }
 
       $wrap.css("top", ($wrap.height() >= $wrap.parent().height() ? Math.floor($wrap.parent().height() - $wrap.height()) : 0));
       $(_C._root).trigger(_E.update);
@@ -412,10 +436,10 @@ var Calc = Calc || (
 
       // 코드 구성
       try {
-        let output = _isDeep(o) ? _deep(o) : _simple(o);
+        let output = _cleanDecimal(_isDeep(o) ? _deep(o) : _simple(o));
         if (output == null) update.call(owner);
         else {
-          update.call(owner, `<span class="${[_C.x(_C.item), _C.x(_C.answer)].join(" ")}">= ${output}</span>`);
+          update.call(owner, `<span class="${[_C.x(_C.item), _C.x(_C.operator)].join(" ")}">=</span> <span class="${[_C.x(_C.item), _C.x(_C.answer)].join(" ")}">${output}</span>`);
           addHistory.call(owner, owner.dataList, output);
           owner.isCalculated = true;
         }
@@ -428,8 +452,6 @@ var Calc = Calc || (
       }
 
       function _deep(_o) {
-        //console.log("[CAL:0]", _o)
-
         // 음수 선처리
         if (owner._Config.enableNegative) {
           if (_o.indexOf("-,") == 0) _o = "_" + _o.slice(2);
@@ -552,6 +574,12 @@ var Calc = Calc || (
         }
         return count == 0;
       }
+
+      function _cleanDecimal(_v) {
+        const v = Number(_v);
+        if(isNaN(v)) return _v;
+        return v%1 === 0 ? _v : _v.toString().replace(/(\.\d*?[1-9])0+$/g, '$1').replace(/\.0+$/, '');
+      }
     }
 
     function back() {
@@ -566,7 +594,9 @@ var Calc = Calc || (
       update.call(this);
     }
 
-    function reset() {
+    function reset(_clearResult) {
+      if(_clearResult) this.previousResult = null;
+
       this.isCalculated = false;
       this.enable = true;
       this.dataList = [];
@@ -588,6 +618,8 @@ var Calc = Calc || (
 
     // history
     function addHistory(_exp, _answer) {
+      this.previousResult = _answer;
+
       if (!this._Config.enableHistory) return;
 
       if (this.historyList == null) this.historyList = [];
@@ -674,9 +706,10 @@ var Calc = Calc || (
 
     return {
       _Config: {
-        limit: 20,
+        limit: 12, //20,
         enableNegative: true,
-        enableHistory: false
+        enableHistory: false,
+        reuseResult: true
       },
 
       historyList: [],
@@ -691,7 +724,7 @@ var Calc = Calc || (
       calculate: calculate,
       back: back,
 
-      reset: reset,
+      reset: function() { reset.call(this, true) },
       close: close,
       alert: alert,
 
